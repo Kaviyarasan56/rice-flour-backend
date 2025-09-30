@@ -35,8 +35,10 @@ public class OrderController {
             // --- Validations ---
             if (input.quantity == null || input.quantity < 1)
                 return ResponseEntity.badRequest().body("Quantity must be at least 1");
+
             if (input.date == null || !(input.date.equals("today") || input.date.equals("tomorrow")))
                 return ResponseEntity.badRequest().body("Date must be 'today' or 'tomorrow'");
+
             if (input.slot == null || !(input.slot.equals("morning") || input.slot.equals("evening")))
                 return ResponseEntity.badRequest().body("Slot must be 'morning' or 'evening'");
 
@@ -53,9 +55,14 @@ public class OrderController {
             Order order = new Order();
             order.setQuantity(input.quantity);
             order.setInstructions(input.instructions);
-            // No address/name/phone required from frontend now
             order.setDate(input.date);
             order.setSlot(input.slot);
+
+            // Optional fields remain null
+            order.setCustomerName(null);
+            order.setPhone(null);
+            order.setEmail(null);
+            order.setAddress(null);
 
             Order savedOrder = orderRepository.save(order);
             System.out.println("Order saved with ID: " + savedOrder.getId());

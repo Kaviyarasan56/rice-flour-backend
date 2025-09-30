@@ -12,9 +12,9 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Customer details
+    // Optional customer details (can be null)
     @Column(name = "customer_name", nullable = true)
-    private String customerName = "Guest";
+    private String customerName;
 
     @Column(nullable = true)
     private String phone;
@@ -25,21 +25,21 @@ public class Order {
     @Column(nullable = true)
     private String address;
 
-    // Required fields
+    // Required field
     @Column(nullable = false)
     private Integer quantity;
 
     @Column(length = 1000, nullable = true)
     private String instructions;
 
-    // Tamil ordering fields
-    @Column(nullable = false)
+    // Tamil ordering fields (still required)
+    @Column(nullable = true)
     private String date; // "today" or "tomorrow"
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String slot; // "morning" or "evening"
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private Timestamp createdAt = Timestamp.from(Instant.now());
 
     // Getters and Setters
