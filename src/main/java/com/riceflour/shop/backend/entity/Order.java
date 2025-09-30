@@ -5,7 +5,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 
 @Entity
-@Table(name = "orders")
+@Table(name = "orderorg") // New table name to avoid conflict with existing 'orders'
 public class Order {
 
     @Id
@@ -13,9 +13,9 @@ public class Order {
     private Long id;
 
     // Optional customer details (can be null)
-    @Column(name = "customer_name", nullable = false)
-    private String customerName = "Guest";
-    
+    @Column(name = "customer_name", nullable = true)
+    private String customerName; // No default value to avoid issues
+
     @Column(nullable = true)
     private String phone;
 
@@ -25,14 +25,14 @@ public class Order {
     @Column(nullable = true)
     private String address;
 
-    // Required field
-    @Column(nullable = false)
+    // Quantity can also be null
+    @Column(nullable = true)
     private Integer quantity;
 
     @Column(length = 1000, nullable = true)
     private String instructions;
 
-    // Tamil ordering fields (still required)
+    // Tamil ordering fields (can be null)
     @Column(nullable = true)
     private String date; // "today" or "tomorrow"
 
@@ -40,9 +40,9 @@ public class Order {
     private String slot; // "morning" or "evening"
 
     @Column(nullable = true)
-    private Timestamp createdAt = Timestamp.from(Instant.now());
+    private Timestamp createdAt; // Optional, will set in service if null
 
-    // Getters and Setters
+    // --- Getters and Setters ---
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
