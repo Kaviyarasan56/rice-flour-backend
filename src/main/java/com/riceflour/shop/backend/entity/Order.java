@@ -13,16 +13,23 @@ public class Order {
     private Long id;
 
     // Optional fields for low-friction orders
+    @Column(nullable = true) // explicitly allow null
     private String customerName;
+
+    @Column(nullable = true)
     private String phone;
+
+    @Column(nullable = true)
     private String email;
+
+    @Column(nullable = true)
     private String address;
 
     // Required fields
     @Column(nullable = false)
     private Integer quantity;
 
-    @Column(length = 1000)
+    @Column(length = 1000, nullable = true)
     private String instructions;
 
     // Tamil ordering fields
@@ -32,6 +39,7 @@ public class Order {
     @Column(nullable = false)
     private String slot; // "morning" or "evening"
 
+    @Column(nullable = false)
     private Timestamp createdAt = Timestamp.from(Instant.now());
 
     // Getters and Setters
