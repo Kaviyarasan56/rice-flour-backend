@@ -25,7 +25,6 @@ public class OrderController {
     public static class OrderInput {
         public Integer quantity;
         public String instructions;
-        public String address;
         public String date; // "today" or "tomorrow"
         public String slot; // "morning" or "evening"
     }
@@ -54,7 +53,7 @@ public class OrderController {
             Order order = new Order();
             order.setQuantity(input.quantity);
             order.setInstructions(input.instructions);
-            order.setAddress(input.address);
+            // No address/name/phone required from frontend now
             order.setDate(input.date);
             order.setSlot(input.slot);
 

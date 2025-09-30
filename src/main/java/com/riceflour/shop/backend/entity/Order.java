@@ -12,9 +12,9 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Optional customer details
-    @Column(nullable = true)
-    private String customerName;
+    // Customer details
+    @Column(name = "customer_name", nullable = true)
+    private String customerName = "Guest";
 
     @Column(nullable = true)
     private String phone;
