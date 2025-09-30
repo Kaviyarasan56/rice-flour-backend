@@ -1,9 +1,6 @@
 package com.riceflour.shop.backend.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import java.sql.Timestamp;
 import java.time.Instant;
 
@@ -15,27 +12,29 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank(message = "Customer name is required")
+    // Optional fields for low-friction orders
     private String customerName;
-
-    @NotBlank(message = "Phone is required")
     private String phone;
-
-    @NotBlank(message = "Email is required")
     private String email;
-
     private String address;
 
-    @NotNull(message = "Quantity is required")
-    @Min(value = 1, message = "Quantity must be at least 1")
+    // Required fields
+    @Column(nullable = false)
     private Integer quantity;
 
+    @Column(length = 1000)
     private String instructions;
+
+    // Tamil ordering fields
+    @Column(nullable = false)
+    private String date; // "today" or "tomorrow"
+
+    @Column(nullable = false)
+    private String slot; // "morning" or "evening"
 
     private Timestamp createdAt = Timestamp.from(Instant.now());
 
     // Getters and Setters
-
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -56,6 +55,12 @@ public class Order {
 
     public String getInstructions() { return instructions; }
     public void setInstructions(String instructions) { this.instructions = instructions; }
+
+    public String getDate() { return date; }
+    public void setDate(String date) { this.date = date; }
+
+    public String getSlot() { return slot; }
+    public void setSlot(String slot) { this.slot = slot; }
 
     public Timestamp getCreatedAt() { return createdAt; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
