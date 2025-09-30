@@ -1,7 +1,6 @@
 package com.riceflour.shop.backend.service;
 
 import com.riceflour.shop.backend.entity.Order;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -9,20 +8,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Service
 public class NotificationService {
 
-    @Value("${TELEGRAM_BOT_TOKEN:}")
-    private String token;
-
-    @Value("${TELEGRAM_CHAT_ID:}")
-    private String chatId;
+    private final String token = "8447374625:AAGKX5Qa2f_27gpi0_zB2J6KQTvO4OMhyiY";
+    private final String chatId = "5525211145";
 
     private final RestTemplate restTemplate = new RestTemplate();
 
     public void sendOrderNotification(Order order) {
         try {
-            if (token == null || token.isBlank() || chatId == null || chatId.isBlank()) {
-                // Notifications disabled - missing configuration
-                return;
-            }
             String message = "உங்கள் ஆர்டர் வெற்றிகரமாக பதிவுசெய்யப்பட்டது!\n" +
                     "ஆர்டர் எண்: " + order.getId() + "\n" +
                     "அளவு: " + order.getQuantity() + "\n" +
@@ -31,6 +23,7 @@ public class NotificationService {
                     "குறிப்பு: " + (order.getInstructions() == null ? "இல்லை" : order.getInstructions()) +
                     "\nமுகவரி: " + (order.getAddress() == null ? "இல்லை" : order.getAddress());
 
+            // Use UriComponentsBuilder to encode properly
             String url = UriComponentsBuilder
                     .fromHttpUrl("https://api.telegram.org/bot" + token + "/sendMessage")
                     .queryParam("chat_id", chatId)
@@ -38,7 +31,9 @@ public class NotificationService {
                     .build()
                     .toUriString();
 
-            restTemplate.getForObject(url, String.class);
+            String response = restTemplate.getForObject(url, String.class);
+
+            System.out.println("Telegram API response for order ID " + order.getId() + ": " + response);
 
         } catch (Exception e) {
             System.err.println("Failed to send Telegram notification for order ID " + order.getId());
