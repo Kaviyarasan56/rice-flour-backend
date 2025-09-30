@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
-    // Basic CRUD is enough
+    // Basic CRUD operations are enough
 }

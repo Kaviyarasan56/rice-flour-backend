@@ -34,25 +34,20 @@ public class OrderController {
     public ResponseEntity<?> placeOrder(@RequestBody OrderInput input) {
         try {
             // --- Validations ---
-            if (input.quantity == null || input.quantity < 1) {
+            if (input.quantity == null || input.quantity < 1)
                 return ResponseEntity.badRequest().body("Quantity must be at least 1");
-            }
-            if (input.date == null || !(input.date.equals("today") || input.date.equals("tomorrow"))) {
+            if (input.date == null || !(input.date.equals("today") || input.date.equals("tomorrow")))
                 return ResponseEntity.badRequest().body("Date must be 'today' or 'tomorrow'");
-            }
-            if (input.slot == null || !(input.slot.equals("morning") || input.slot.equals("evening"))) {
+            if (input.slot == null || !(input.slot.equals("morning") || input.slot.equals("evening")))
                 return ResponseEntity.badRequest().body("Slot must be 'morning' or 'evening'");
-            }
 
             // --- Time restriction ---
             LocalTime now = LocalTime.now();
             if (input.date.equals("today")) {
-                if (input.slot.equals("morning") && now.isAfter(LocalTime.of(10, 0))) {
+                if (input.slot.equals("morning") && now.isAfter(LocalTime.of(10, 0)))
                     return ResponseEntity.badRequest().body("காலை நேரம் முடிந்தது. நாளை தேர்ந்தெடுக்கவும்.");
-                }
-                if (input.slot.equals("evening") && now.isAfter(LocalTime.of(17, 0))) {
+                if (input.slot.equals("evening") && now.isAfter(LocalTime.of(17, 0)))
                     return ResponseEntity.badRequest().body("இன்று மாலை நேரம் முடிந்தது. நாளை தேர்ந்தெடுக்கவும்.");
-                }
             }
 
             // --- Save Order ---
@@ -66,13 +61,12 @@ public class OrderController {
             Order savedOrder = orderRepository.save(order);
             System.out.println("Order saved with ID: " + savedOrder.getId());
 
-            // --- Send Telegram notification safely ---
+            // --- Send Telegram notification ---
             notificationService.sendOrderNotification(savedOrder);
 
             return ResponseEntity.ok(savedOrder);
 
         } catch (Exception e) {
-            // Catch any unexpected errors
             e.printStackTrace();
             return ResponseEntity.status(500).body("Internal Server Error: " + e.getMessage());
         }

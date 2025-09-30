@@ -12,8 +12,8 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Optional fields for low-friction orders
-    @Column(nullable = true) // explicitly allow null
+    // Optional customer details
+    @Column(nullable = true)
     private String customerName;
 
     @Column(nullable = true)

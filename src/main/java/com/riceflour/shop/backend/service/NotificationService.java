@@ -8,8 +8,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Service
 public class NotificationService {
 
-    private final String token = "8447374625:AAGKX5Qa2f_27gpi0_zB2J6KQTvO4OMhyiY";
-    private final String chatId = "5525211145";
+    private final String token = "YOUR_TELEGRAM_BOT_TOKEN";
+    private final String chatId = "YOUR_CHAT_ID";
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -23,7 +23,6 @@ public class NotificationService {
                     "குறிப்பு: " + (order.getInstructions() == null ? "இல்லை" : order.getInstructions()) +
                     "\nமுகவரி: " + (order.getAddress() == null ? "இல்லை" : order.getAddress());
 
-            // Use UriComponentsBuilder to encode properly
             String url = UriComponentsBuilder
                     .fromHttpUrl("https://api.telegram.org/bot" + token + "/sendMessage")
                     .queryParam("chat_id", chatId)
@@ -31,9 +30,7 @@ public class NotificationService {
                     .build()
                     .toUriString();
 
-            String response = restTemplate.getForObject(url, String.class);
-
-            System.out.println("Telegram API response for order ID " + order.getId() + ": " + response);
+            restTemplate.getForObject(url, String.class);
 
         } catch (Exception e) {
             System.err.println("Failed to send Telegram notification for order ID " + order.getId());
