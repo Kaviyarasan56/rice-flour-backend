@@ -13,9 +13,9 @@ public class Order {
     private Long id;
 
     // Optional customer details (can be null)
-    @Column(name = "customer_name", nullable = true)
-    private String customerName;
-
+    @Column(name = "customer_name", nullable = false)
+    private String customerName = "Guest";
+    
     @Column(nullable = true)
     private String phone;
 
