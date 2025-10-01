@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "orders")
+@Table(name = "orders1")
 public class Order {
 
     public enum Status { PENDING, DELIVERED, CANCELLED }
