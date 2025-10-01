@@ -1,65 +1,81 @@
 package com.riceflour.shop.backend.entity;
 
 import jakarta.persistence.*;
-import java.sql.Timestamp;
 import java.time.Instant;
 
 @Entity
-@Table(name = "orderorg") // New table name to avoid conflict with existing 'orders'
+@Table(name = "orders")
 public class Order {
+
+    public enum Status { PENDING, DELIVERED, CANCELLED }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Optional customer details (can be null)
-    @Column(name = "customer_name", nullable = true)
-    private String customerName; // No default value to avoid issues
+    // Link to user if registered (nullable)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = true)
+    private User user;
 
-    @Column(nullable = true)
-    private String phone;
+    // Device id (always set by client)
+    @Column(name = "device_id", nullable = false)
+    private String deviceId;
 
-    @Column(nullable = true)
-    private String email;
+    @Column(nullable = false)
+    private Integer quantity = 1;
 
-    @Column(nullable = true)
-    private String address;
+    @Column(nullable = false)
+    private Integer unitPrice = 25; // ₹25 per unit
 
-    // Quantity can also be null
-    @Column(nullable = true)
-    private Integer quantity;
+    @Column(nullable = false)
+    private Integer totalPrice = 25; // computed
 
     @Column(length = 1000, nullable = true)
     private String instructions;
 
-    // Tamil ordering fields (can be null)
-    @Column(nullable = true)
+    // Slot/date fields
+    @Column(nullable = false)
     private String date; // "today" or "tomorrow"
 
-    @Column(nullable = true)
+    @Column(nullable = false)
     private String slot; // "morning" or "evening"
 
-    @Column(nullable = true)
-    private Timestamp createdAt; // Optional, will set in service if null
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Status status = Status.PENDING;
 
-    // --- Getters and Setters ---
+    @Column(nullable = false)
+    private Instant createdAt = Instant.now();
+
+    @Column(nullable = true)
+    private Instant deliveredAt;
+
+    // Helper: recalc total price based on quantity + discount rule
+    public void recalcTotal() {
+        int total = (unitPrice * (quantity == null ? 0 : quantity));
+        if (quantity != null && quantity > 5) total = Math.max(0, total - 10); // flat ₹10 discount
+        this.totalPrice = total;
+    }
+
+    // Getters / setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public String getCustomerName() { return customerName; }
-    public void setCustomerName(String customerName) { this.customerName = customerName; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
 
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getAddress() { return address; }
-    public void setAddress(String address) { this.address = address; }
+    public String getDeviceId() { return deviceId; }
+    public void setDeviceId(String deviceId) { this.deviceId = deviceId; }
 
     public Integer getQuantity() { return quantity; }
-    public void setQuantity(Integer quantity) { this.quantity = quantity; }
+    public void setQuantity(Integer quantity) { this.quantity = quantity; recalcTotal(); }
+
+    public Integer getUnitPrice() { return unitPrice; }
+    public void setUnitPrice(Integer unitPrice) { this.unitPrice = unitPrice; recalcTotal(); }
+
+    public Integer getTotalPrice() { return totalPrice; }
+    public void setTotalPrice(Integer totalPrice) { this.totalPrice = totalPrice; }
 
     public String getInstructions() { return instructions; }
     public void setInstructions(String instructions) { this.instructions = instructions; }
@@ -70,6 +86,12 @@ public class Order {
     public String getSlot() { return slot; }
     public void setSlot(String slot) { this.slot = slot; }
 
-    public Timestamp getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
+    public Status getStatus() { return status; }
+    public void setStatus(Status status) { this.status = status; }
+
+    public Instant getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+
+    public Instant getDeliveredAt() { return deliveredAt; }
+    public void setDeliveredAt(Instant deliveredAt) { this.deliveredAt = deliveredAt; }
 }
