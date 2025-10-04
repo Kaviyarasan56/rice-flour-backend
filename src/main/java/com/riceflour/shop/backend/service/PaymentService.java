@@ -19,11 +19,10 @@ import java.util.UUID;
 @Service
 public class PaymentService {
 
-    @Value("${razorpay.key.id}")
-    private String razorpayKeyId;
-
-    @Value("${razorpay.key.secret}")
-    private String razorpayKeySecret;
+  
+    // Hardcoded Razorpay credentials
+    private final String razorpayKeyId = "rzp_test_RPSteL8rpgHc4n";
+    private final String razorpayKeySecret = "jmhKejQ5pnm1HCVNXV5Yqu9u";
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
 

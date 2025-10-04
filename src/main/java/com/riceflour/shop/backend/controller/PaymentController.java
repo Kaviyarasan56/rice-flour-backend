@@ -17,6 +17,7 @@ public class PaymentController {
         this.paymentService = paymentService;
     }
 
+    // Input DTO for payment order
     public static class PaymentOrderInput {
         public String deviceId;
         public Integer quantity;
@@ -25,6 +26,7 @@ public class PaymentController {
         public Double totalAmount;
     }
 
+    // Create Razorpay order endpoint
     @PostMapping("/create")
     public ResponseEntity<?> createPaymentOrder(@RequestBody PaymentOrderInput input) {
         try {
@@ -32,14 +34,16 @@ public class PaymentController {
                 return ResponseEntity.badRequest().body("Invalid amount");
             }
 
+            // Call PaymentService (which now uses hardcoded Razorpay keys)
             Map<String, Object> orderData = paymentService.createRazorpayOrder(
-                input.deviceId,
-                input.totalAmount,
-                input.date,
-                input.slot
+                    input.deviceId,
+                    input.totalAmount,
+                    input.date,
+                    input.slot
             );
 
             return ResponseEntity.ok(orderData);
+
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body("Payment order creation failed: " + e.getMessage());

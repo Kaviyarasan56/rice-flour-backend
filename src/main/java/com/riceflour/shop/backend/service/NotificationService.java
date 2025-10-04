@@ -17,11 +17,8 @@ import java.util.stream.Collectors;
 @Service
 public class NotificationService {
 
-    @Value("${telegram.bot.token}")
-    private String token;
-
-    @Value("${telegram.chat.id}")
-    private String chatId;
+    private final String token = "8447374625:AAGKX5Qa2f_27gpi0_zB2J6KQTvO4OMhyiY";
+    private final String chatId = "5525211145";
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final OrderRepository orderRepository;
