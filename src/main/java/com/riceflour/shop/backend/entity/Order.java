@@ -4,21 +4,20 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "orders1")
+@Table(name = "orderstable")
 public class Order {
 
     public enum Status { PENDING, DELIVERED, CANCELLED }
+    public enum PaymentStatus { PENDING, PAID, COD_PENDING, FAILED }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Link to user if registered (nullable)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
-    // Device id (always set by client)
     @Column(name = "device_id", nullable = false)
     private String deviceId;
 
@@ -26,20 +25,35 @@ public class Order {
     private Integer quantity = 1;
 
     @Column(nullable = false)
-    private Integer unitPrice = 25; // ₹25 per unit
+    private Integer unitPrice = 25;
 
     @Column(nullable = false)
-    private Integer totalPrice = 25; // computed
+    private Double totalPrice = 25.0;
 
     @Column(length = 1000, nullable = true)
     private String instructions;
 
-    // Slot/date fields
     @Column(nullable = false)
-    private String date; // "today" or "tomorrow"
+    private String date;
 
     @Column(nullable = false)
-    private String slot; // "morning" or "evening"
+    private String slot;
+
+    @Column(nullable = true, length = 50)
+    private String paymentMethod = "COD";
+
+    @Column(nullable = true)
+    private String razorpayOrderId;
+
+    @Column(nullable = true)
+    private String razorpayPaymentId;
+
+    @Column(nullable = true)
+    private String razorpaySignature;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50)
+    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -51,14 +65,7 @@ public class Order {
     @Column(nullable = true)
     private Instant deliveredAt;
 
-    // Helper: recalc total price based on quantity + discount rule
-    public void recalcTotal() {
-        int total = (unitPrice * (quantity == null ? 0 : quantity));
-        if (quantity != null && quantity > 5) total = Math.max(0, total - 10); // flat ₹10 discount
-        this.totalPrice = total;
-    }
-
-    // Getters / setters
+    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -69,13 +76,13 @@ public class Order {
     public void setDeviceId(String deviceId) { this.deviceId = deviceId; }
 
     public Integer getQuantity() { return quantity; }
-    public void setQuantity(Integer quantity) { this.quantity = quantity; recalcTotal(); }
+    public void setQuantity(Integer quantity) { this.quantity = quantity; }
 
     public Integer getUnitPrice() { return unitPrice; }
-    public void setUnitPrice(Integer unitPrice) { this.unitPrice = unitPrice; recalcTotal(); }
+    public void setUnitPrice(Integer unitPrice) { this.unitPrice = unitPrice; }
 
-    public Integer getTotalPrice() { return totalPrice; }
-    public void setTotalPrice(Integer totalPrice) { this.totalPrice = totalPrice; }
+    public Double getTotalPrice() { return totalPrice; }
+    public void setTotalPrice(Double totalPrice) { this.totalPrice = totalPrice; }
 
     public String getInstructions() { return instructions; }
     public void setInstructions(String instructions) { this.instructions = instructions; }
@@ -85,6 +92,21 @@ public class Order {
 
     public String getSlot() { return slot; }
     public void setSlot(String slot) { this.slot = slot; }
+
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+
+    public String getRazorpayOrderId() { return razorpayOrderId; }
+    public void setRazorpayOrderId(String razorpayOrderId) { this.razorpayOrderId = razorpayOrderId; }
+
+    public String getRazorpayPaymentId() { return razorpayPaymentId; }
+    public void setRazorpayPaymentId(String razorpayPaymentId) { this.razorpayPaymentId = razorpayPaymentId; }
+
+    public String getRazorpaySignature() { return razorpaySignature; }
+    public void setRazorpaySignature(String razorpaySignature) { this.razorpaySignature = razorpaySignature; }
+
+    public PaymentStatus getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(PaymentStatus paymentStatus) { this.paymentStatus = paymentStatus; }
 
     public Status getStatus() { return status; }
     public void setStatus(Status status) { this.status = status; }

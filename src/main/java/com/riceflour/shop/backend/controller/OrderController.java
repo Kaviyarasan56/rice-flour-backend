@@ -20,8 +20,13 @@ public class OrderController {
         public String deviceId;
         public Integer quantity;
         public String instructions;
-        public String date; // "today" or "tomorrow"
-        public String slot; // "morning" or "evening"
+        public String date;
+        public String slot;
+        public Double totalPrice;
+        public String paymentMethod;
+        public String razorpayOrderId;
+        public String razorpayPaymentId;
+        public String razorpaySignature;
     }
 
     public OrderController(OrderService orderService, OrderRepository orderRepository) {
@@ -45,11 +50,22 @@ public class OrderController {
         }
 
         try {
-            Order order = orderService.placeOrMergeOrder(input.deviceId, input.quantity, input.instructions, input.date, input.slot);
+            Order order = orderService.placeOrMergeOrder(
+                input.deviceId,
+                input.quantity,
+                input.instructions,
+                input.date,
+                input.slot,
+                input.totalPrice,
+                input.paymentMethod,
+                input.razorpayOrderId,
+                input.razorpayPaymentId,
+                input.razorpaySignature
+            );
             return ResponseEntity.ok(order);
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(500).body("Internal Server Error");
+            return ResponseEntity.status(500).body("Internal Server Error: " + e.getMessage());
         }
     }
 
