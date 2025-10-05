@@ -2,14 +2,15 @@ package com.riceflour.shop.backend.service;
 
 import com.riceflour.shop.backend.entity.Order;
 import com.riceflour.shop.backend.repository.OrderRepository;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -22,6 +23,7 @@ public class NotificationService {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final OrderRepository orderRepository;
+    private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
 
     public NotificationService(OrderRepository orderRepository) {
         this.orderRepository = orderRepository;
@@ -29,7 +31,7 @@ public class NotificationService {
 
     public void sendOrderNotification(Order order) {
         try {
-            String dateLabel = getDateLabel(order.getDate());
+            String dateLabel = getDateLabelWithActualDate(order.getDate());
             String slotLabel = getSlotLabel(order.getSlot());
             String paymentLabel = getPaymentLabel(order);
 
@@ -61,18 +63,29 @@ public class NotificationService {
     // Send at 12 AM (midnight) for morning slot summary
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Kolkata")
     public void sendMorningSlotSummary() {
-        sendSlotSummary("today", "morning", "📦 Today Morning Slot (Final)");
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+        sendSlotSummaryForDate(today, "morning", "📦 Today Morning Slot (Final)");
     }
 
     // Send at 10 AM for evening slot summary
     @Scheduled(cron = "0 0 10 * * *", zone = "Asia/Kolkata")
     public void sendEveningSlotSummary() {
-        sendSlotSummary("today", "evening", "📦 Today Evening Slot (Final)");
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+        sendSlotSummaryForDate(today, "evening", "📦 Today Evening Slot (Final)");
     }
 
-    private void sendSlotSummary(String date, String slot, String title) {
+    private void sendSlotSummaryForDate(LocalDate targetDate, String slot, String title) {
         try {
-            List<Order> orders = orderRepository.findByDateAndSlotAndStatus(date, slot, Order.Status.PENDING);
+            // Calculate which orders match this actual date
+            List<Order> orders = orderRepository.findByDateAndSlotAndStatus("today", slot, Order.Status.PENDING)
+                .stream()
+                .filter(o -> getActualDeliveryDate(o.getDate(), o.getCreatedAt()).equals(targetDate))
+                .collect(Collectors.toList());
+            
+            orders.addAll(orderRepository.findByDateAndSlotAndStatus("tomorrow", slot, Order.Status.PENDING)
+                .stream()
+                .filter(o -> getActualDeliveryDate(o.getDate(), o.getCreatedAt()).equals(targetDate))
+                .collect(Collectors.toList()));
             
             if (orders.isEmpty()) {
                 sendTelegramMessage(title + "\n\nNo orders for this slot.");
@@ -88,18 +101,35 @@ public class NotificationService {
                 ));
 
             StringBuilder sb = new StringBuilder();
-            sb.append(title).append("\n\n");
+            sb.append(title).append(" - ").append(targetDate.format(dateFormatter)).append("\n\n");
             sb.append("Total Orders: ").append(totalOrders).append("\n");
             sb.append("Total Quantity: ").append(totalQuantity).append("\n\n");
 
             for (Map.Entry<String, List<Order>> entry : ordersByUser.entrySet()) {
                 String userName = entry.getKey();
-                int userQty = entry.getValue().stream().mapToInt(Order::getQuantity).sum();
-                boolean isPaid = entry.getValue().stream()
-                    .anyMatch(o -> o.getPaymentStatus() == Order.PaymentStatus.PAID);
+                List<Order> userOrders = entry.getValue();
                 
-                String paymentIcon = isPaid ? "✅ Paid" : "💵 COD";
-                sb.append("- ").append(userName).append(": ").append(userQty).append(" (").append(paymentIcon).append(")\n");
+                int paidQty = userOrders.stream()
+                    .filter(o -> o.getPaymentStatus() == Order.PaymentStatus.PAID)
+                    .mapToInt(Order::getQuantity)
+                    .sum();
+                
+                int codQty = userOrders.stream()
+                    .filter(o -> o.getPaymentStatus() == Order.PaymentStatus.COD_PENDING)
+                    .mapToInt(Order::getQuantity)
+                    .sum();
+                
+                int totalUserQty = paidQty + codQty;
+                
+                sb.append("- ").append(userName).append(": ").append(totalUserQty);
+                if (paidQty > 0 && codQty > 0) {
+                    sb.append(" (✅ Paid: ").append(paidQty).append(", 💵 COD: ").append(codQty).append(")");
+                } else if (paidQty > 0) {
+                    sb.append(" (✅ Paid)");
+                } else {
+                    sb.append(" (💵 COD)");
+                }
+                sb.append("\n");
             }
 
             sendTelegramMessage(sb.toString());
@@ -120,10 +150,27 @@ public class NotificationService {
         restTemplate.getForObject(url, String.class);
     }
 
-    private String getDateLabel(String date) {
-        if ("today".equalsIgnoreCase(date)) return "இன்று";
-        if ("tomorrow".equalsIgnoreCase(date)) return "நாளை";
-        return "தெரியவில்லை";
+    private String getDateLabelWithActualDate(String date) {
+        LocalDate actualDate = getActualDeliveryDate(date, 
+            LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toInstant(ZoneId.of("Asia/Kolkata").getRules().getOffset(LocalDateTime.now())));
+        String formatted = actualDate.format(dateFormatter);
+        
+        if ("today".equalsIgnoreCase(date)) {
+            return "இன்று (" + formatted + ")";
+        } else if ("tomorrow".equalsIgnoreCase(date)) {
+            return "நாளை (" + formatted + ")";
+        }
+        return "தெரியவில்லை (" + formatted + ")";
+    }
+
+    private LocalDate getActualDeliveryDate(String dateLabel, java.time.Instant createdAt) {
+        LocalDate orderDate = LocalDateTime.ofInstant(createdAt, ZoneId.of("Asia/Kolkata")).toLocalDate();
+        if ("today".equalsIgnoreCase(dateLabel)) {
+            return orderDate;
+        } else if ("tomorrow".equalsIgnoreCase(dateLabel)) {
+            return orderDate.plusDays(1);
+        }
+        return orderDate;
     }
 
     private String getSlotLabel(String slot) {

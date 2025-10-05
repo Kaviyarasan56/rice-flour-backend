@@ -7,7 +7,9 @@ import com.riceflour.shop.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.Optional;
 
@@ -43,6 +45,8 @@ public class OrderService {
 
         // Handle payment verification for UPI
         Order.PaymentStatus paymentStatus = Order.PaymentStatus.COD_PENDING;
+        boolean isPaidOrder = false;
+        
         if ("UPI".equalsIgnoreCase(paymentMethod)) {
             if (razorpayOrderId == null || razorpayPaymentId == null || razorpaySignature == null) {
                 throw new Exception("Payment details incomplete for UPI payment");
@@ -54,56 +58,37 @@ public class OrderService {
                 throw new Exception("Payment verification failed");
             }
             paymentStatus = Order.PaymentStatus.PAID;
+            isPaidOrder = true;
         }
 
-        // Try to find existing pending order for same slot
-        Optional<Order> pendingSame = orderRepository.findFirstByDeviceIdAndDateAndSlotAndStatusOrderByCreatedAtDesc(
-            deviceId, date, slot, Order.Status.PENDING
-        );
-
         Order order;
-        if (pendingSame.isPresent()) {
-            // Merge orders
-            order = pendingSame.get();
-            int newQty = (order.getQuantity() == null ? 0 : order.getQuantity()) + (quantity == null ? 0 : quantity);
-            order.setQuantity(newQty);
+        
+        // Only merge COD orders with other COD pending orders - never merge with paid orders
+        if ("COD".equalsIgnoreCase(paymentMethod)) {
+            Optional<Order> pendingCOD = orderRepository.findFirstByDeviceIdAndDateAndSlotAndStatusOrderByCreatedAtDesc(
+                deviceId, date, slot, Order.Status.PENDING
+            );
             
-            String existingInstr = order.getInstructions() == null ? "" : order.getInstructions();
-            String newInstr = (instructions == null ? "" : instructions);
-            String combined = (existingInstr + (existingInstr.isEmpty() || newInstr.isEmpty() ? "" : " | ") + newInstr).trim();
-            order.setInstructions(combined.isEmpty() ? null : combined);
-            
-            // Update payment info if this is a UPI payment
-            if ("UPI".equalsIgnoreCase(paymentMethod)) {
-                order.setPaymentMethod(paymentMethod);
-                order.setRazorpayOrderId(razorpayOrderId);
-                order.setRazorpayPaymentId(razorpayPaymentId);
-                order.setRazorpaySignature(razorpaySignature);
-                order.setPaymentStatus(paymentStatus);
+            if (pendingCOD.isPresent() && pendingCOD.get().getPaymentStatus() == Order.PaymentStatus.COD_PENDING) {
+                // Merge with existing COD order
+                order = pendingCOD.get();
+                int newQty = (order.getQuantity() == null ? 0 : order.getQuantity()) + (quantity == null ? 0 : quantity);
+                order.setQuantity(newQty);
+                
+                String existingInstr = order.getInstructions() == null ? "" : order.getInstructions();
+                String newInstr = (instructions == null ? "" : instructions);
+                String combined = (existingInstr + (existingInstr.isEmpty() || newInstr.isEmpty() ? "" : " | ") + newInstr).trim();
+                order.setInstructions(combined.isEmpty() ? null : combined);
+                
+                order.setTotalPrice(totalPrice);
+                orderRepository.save(order);
+            } else {
+                // Create new COD order
+                order = createNewOrder(deviceId, user, quantity, instructions, date, slot, totalPrice, paymentMethod, paymentStatus, null, null, null);
             }
-            
-            order.setTotalPrice(totalPrice);
-            orderRepository.save(order);
         } else {
-            // Create new order
-            order = new Order();
-            order.setDeviceId(deviceId);
-            order.setUser(user);
-            order.setQuantity(quantity == null ? 1 : quantity);
-            order.setInstructions(instructions);
-            order.setDate(date);
-            order.setSlot(slot);
-            order.setTotalPrice(totalPrice);
-            order.setPaymentMethod(paymentMethod == null ? "COD" : paymentMethod);
-            order.setPaymentStatus(paymentStatus);
-            
-            if ("UPI".equalsIgnoreCase(paymentMethod)) {
-                order.setRazorpayOrderId(razorpayOrderId);
-                order.setRazorpayPaymentId(razorpayPaymentId);
-                order.setRazorpaySignature(razorpaySignature);
-            }
-            
-            orderRepository.save(order);
+            // Always create new order for UPI payments - never merge
+            order = createNewOrder(deviceId, user, quantity, instructions, date, slot, totalPrice, paymentMethod, paymentStatus, razorpayOrderId, razorpayPaymentId, razorpaySignature);
         }
 
         // Send Telegram notification
@@ -116,15 +101,53 @@ public class OrderService {
         return order;
     }
 
+    private Order createNewOrder(String deviceId, User user, Integer quantity, String instructions,
+                                String date, String slot, Double totalPrice, String paymentMethod,
+                                Order.PaymentStatus paymentStatus, String razorpayOrderId, 
+                                String razorpayPaymentId, String razorpaySignature) {
+        Order order = new Order();
+        order.setDeviceId(deviceId);
+        order.setUser(user);
+        order.setQuantity(quantity == null ? 1 : quantity);
+        order.setInstructions(instructions);
+        order.setDate(date);
+        order.setSlot(slot);
+        order.setTotalPrice(totalPrice);
+        order.setPaymentMethod(paymentMethod == null ? "COD" : paymentMethod);
+        order.setPaymentStatus(paymentStatus);
+        
+        if ("UPI".equalsIgnoreCase(paymentMethod)) {
+            order.setRazorpayOrderId(razorpayOrderId);
+            order.setRazorpayPaymentId(razorpayPaymentId);
+            order.setRazorpaySignature(razorpaySignature);
+        }
+        
+        return orderRepository.save(order);
+    }
+
     private void validateSlotCutoff(String date, String slot) throws Exception {
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
-        int currentHour = now.getHour();
-
-        if ("today".equalsIgnoreCase(date)) {
-            if ("morning".equalsIgnoreCase(slot) && currentHour >= 0) {
+        LocalDate today = now.toLocalDate();
+        LocalTime currentTime = now.toLocalTime();
+        
+        // Calculate actual delivery date
+        LocalDate deliveryDate = "today".equalsIgnoreCase(date) ? today : today.plusDays(1);
+        
+        // Check if delivery date is in the past
+        if (deliveryDate.isBefore(today)) {
+            throw new Exception("Cannot order for past dates");
+        }
+        
+        // Morning slot cutoff: 12:00 AM (midnight) of delivery date
+        if ("morning".equalsIgnoreCase(slot)) {
+            if (deliveryDate.equals(today) && currentTime.isAfter(LocalTime.MIDNIGHT)) {
                 throw new Exception("காலை ஸ்லாட் முடிந்துவிட்டது (12 AM க்கு பிறகு)");
             }
-            if ("evening".equalsIgnoreCase(slot) && currentHour >= 10) {
+        }
+        
+        // Evening slot cutoff: 10:00 AM of delivery date
+        if ("evening".equalsIgnoreCase(slot)) {
+            if (deliveryDate.equals(today) && currentTime.isAfter(LocalTime.of(10, 0))) {
                 throw new Exception("மாலை ஸ்லாட் முடிந்துவிட்டது (10 AM க்கு பிறகு)");
             }
         }
