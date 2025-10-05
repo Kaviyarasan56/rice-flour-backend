@@ -31,7 +31,7 @@ public class NotificationService {
 
     public void sendOrderNotification(Order order) {
         try {
-            String dateLabel = getDateLabelWithActualDate(order.getDate());
+            String dateLabel = getDateLabelWithActualDate(order.getDate(), order.getCreatedAt());
             String slotLabel = getSlotLabel(order.getSlot());
             String paymentLabel = getPaymentLabel(order);
 
@@ -150,9 +150,8 @@ public class NotificationService {
         restTemplate.getForObject(url, String.class);
     }
 
-    private String getDateLabelWithActualDate(String date) {
-        LocalDate actualDate = getActualDeliveryDate(date, 
-            LocalDateTime.now(ZoneId.of("Asia/Kolkata")).toInstant(ZoneId.of("Asia/Kolkata").getRules().getOffset(LocalDateTime.now())));
+    private String getDateLabelWithActualDate(String date, java.time.Instant createdAt) {
+        LocalDate actualDate = getActualDeliveryDate(date, createdAt);
         String formatted = actualDate.format(dateFormatter);
         
         if ("today".equalsIgnoreCase(date)) {
