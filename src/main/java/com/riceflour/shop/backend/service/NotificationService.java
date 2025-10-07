@@ -42,7 +42,7 @@ public class NotificationService {
             if (order.getUser() != null) {
                 sb.append("பெயர்: ").append(order.getUser().getName() == null ? "பொது" : order.getUser().getName()).append("\n");
                 sb.append("ஊர்: ").append(order.getUser().getVillage() == null ? "இல்லை" : order.getUser().getVillage()).append("\n");
-                sb.append("தொலைபேசி: ").append(order.getUser().getPhone() == null ? "இல்லை" : order.getUser().getPhone()).append("\n");
+                sb.append("தொலைபேசி: ").append(order.getUser().getPhoneEncrypted() == null ? "இல்லை" : order.getUser().getPhoneEncrypted()).append("\n");
             }
             
             sb.append("அளவு: ").append(order.getQuantity()).append("\n");

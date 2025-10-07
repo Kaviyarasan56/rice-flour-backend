@@ -1,14 +1,28 @@
 package com.riceflour.shop.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "orderstablefinal1")
+@Table(name = "orderstablefinalandfixed1")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Order {
 
-    public enum Status { PENDING, DELIVERED, CANCELLED }
-    public enum PaymentStatus { PENDING, PAID, COD_PENDING, FAILED }
+    public enum Status { 
+        PENDING, 
+        PROCESSING, 
+        OUT_FOR_DELIVERY, 
+        DELIVERED, 
+        CANCELLED 
+    }
+    
+    public enum PaymentStatus { 
+        PENDING, 
+        PAID, 
+        COD_PENDING, 
+        FAILED 
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -16,6 +30,7 @@ public class Order {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = true)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User user;
 
     @Column(name = "device_id", nullable = false)
@@ -63,7 +78,19 @@ public class Order {
     private Instant createdAt = Instant.now();
 
     @Column(nullable = true)
+    private Instant processingAt;
+
+    @Column(nullable = true)
+    private Instant outForDeliveryAt;
+
+    @Column(nullable = true)
     private Instant deliveredAt;
+
+    @Column(nullable = true)
+    private Instant cancelledAt;
+
+    @Column(nullable = true, length = 500)
+    private String statusNote;
 
     // Getters and Setters
     public Long getId() { return id; }
@@ -109,11 +136,35 @@ public class Order {
     public void setPaymentStatus(PaymentStatus paymentStatus) { this.paymentStatus = paymentStatus; }
 
     public Status getStatus() { return status; }
-    public void setStatus(Status status) { this.status = status; }
+    public void setStatus(Status status) { 
+        this.status = status;
+        Instant now = Instant.now();
+        if (status == Status.PROCESSING && this.processingAt == null) {
+            this.processingAt = now;
+        } else if (status == Status.OUT_FOR_DELIVERY && this.outForDeliveryAt == null) {
+            this.outForDeliveryAt = now;
+        } else if (status == Status.DELIVERED && this.deliveredAt == null) {
+            this.deliveredAt = now;
+        } else if (status == Status.CANCELLED && this.cancelledAt == null) {
+            this.cancelledAt = now;
+        }
+    }
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 
+    public Instant getProcessingAt() { return processingAt; }
+    public void setProcessingAt(Instant processingAt) { this.processingAt = processingAt; }
+
+    public Instant getOutForDeliveryAt() { return outForDeliveryAt; }
+    public void setOutForDeliveryAt(Instant outForDeliveryAt) { this.outForDeliveryAt = outForDeliveryAt; }
+
     public Instant getDeliveredAt() { return deliveredAt; }
     public void setDeliveredAt(Instant deliveredAt) { this.deliveredAt = deliveredAt; }
+
+    public Instant getCancelledAt() { return cancelledAt; }
+    public void setCancelledAt(Instant cancelledAt) { this.cancelledAt = cancelledAt; }
+
+    public String getStatusNote() { return statusNote; }
+    public void setStatusNote(String statusNote) { this.statusNote = statusNote; }
 }

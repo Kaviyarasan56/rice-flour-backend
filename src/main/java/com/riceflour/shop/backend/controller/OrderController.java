@@ -34,6 +34,14 @@ public class OrderController {
         this.orderRepository = orderRepository;
     }
 
+    // Add to existing OrderController.java
+
+@GetMapping("/user/{deviceId}")
+public ResponseEntity<List<Order>> getUserOrders(@PathVariable String deviceId) {
+    List<Order> orders = orderRepository.findByDeviceIdOrderByCreatedAtDesc(deviceId);
+    return ResponseEntity.ok(orders);
+}
+
     @PostMapping
     public ResponseEntity<?> placeOrder(@RequestBody OrderInput input) {
         if (input == null || input.deviceId == null || input.deviceId.isBlank()) {
